@@ -1,1 +1,2 @@
-flask --app hello run
+pip install -r libs.txt
+flask run
