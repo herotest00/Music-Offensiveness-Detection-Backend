@@ -1,2 +1,2 @@
 pip install -r libs.txt
-flask run
+flask run --debug

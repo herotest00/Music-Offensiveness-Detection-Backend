@@ -2,6 +2,7 @@ import os
 
 from dotenv import load_dotenv
 from flask import Flask
+from flask_cors import CORS
 
 from api.offensiveness_resource import off_resource
 
@@ -16,3 +17,6 @@ if APP_ENV:
     load_dotenv("resources/.env.local")
 else:
     load_dotenv("resources/.env.prod")
+
+# CORS
+CORS(app, resources={r"/*": {"origins": os.environ["http.cors.allow-origins"]}})
