@@ -1,3 +1,14 @@
 flask
-python-dotenv
 flask-cors
+
+python-dotenv
+
+pytube
+youtube-transcript-api
+
+moviepy
+
+PySoundFile
+git+https://github.com/facebookresearch/demucs#egg=demucs
+
+git+https://github.com/openai/whisper.git
