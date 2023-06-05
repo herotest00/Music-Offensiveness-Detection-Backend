@@ -11,10 +11,10 @@ off_resource = Blueprint("offensiveness_resource", __name__)
 def get_offensiveness_for_url():
     url = request.args.get("url")
     service = OffensivenessService(url)
-    service.start_processing()
+    video_offensiveness, audio_offensiveness = service.start_processing()
 
     offensiveness = {'videoOffensiveness': 0.13,
-                     'textOffensiveness': 0.93}
+                     'audioOffensiveness': audio_offensiveness}
     return offensiveness
 
 

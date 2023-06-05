@@ -1,7 +1,9 @@
+pip cache remove *
+venv\Scripts\activate
 pip install -r libs.txt
+
 flask run --debug
 
-pip cache remove *
 
 nu cred ca mai trb
 pip uninstall protobuf
