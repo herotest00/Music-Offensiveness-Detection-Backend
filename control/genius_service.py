@@ -6,23 +6,21 @@ import lyricsgenius
 
 class GeniusService:
 
-    def __init__(self, artist, title):
+    def __init__(self):
         self.__genius = lyricsgenius.Genius()
-        self.__artist = artist
-        self.__title = title
 
-    def fetch_lyrics_from_genius(self):
+    def fetch_lyrics_from_genius(self, artist, title):
         print("Fetching lyrics from genius")
         lyrics = None
-        song = self.__query_songs(self.__artist, self.__title)
-        if song is not None and not self.__similar_artists(self.__artist, song.artist):
+        song = self.__query_songs(artist, title)
+        if song is not None and not self.__similar_artists(artist, song.artist):
             print("Wrong artist. Trying fetching only by title")
-            song = self.__query_songs(None, self.__title)
-            if song is not None and not self.__similar_artists(self.__artist, song.artist):
+            song = self.__query_songs(None, title)
+            if song is not None and not self.__similar_artists(artist, song.artist):
                 song = None
         if song is not None:
             lyrics = re.sub(r'\[.*]', '', song.lyrics)
-            lyrics = [{'text': line, 'start': 0, 'duration': 0} for line in lyrics.split('\n')[1:] if line != '']
+            lyrics = [{'text': line} for line in lyrics.split('\n')[1:] if line != '']
             print("Fetched lyrics from genius")
         else:
             print("No lyrics found on genius")

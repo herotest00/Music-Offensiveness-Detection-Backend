@@ -1,4 +1,7 @@
 import json
+import traceback
+
+from werkzeug.exceptions import HTTPException
 
 from flask import Blueprint, request
 
@@ -20,10 +23,17 @@ def get_offensiveness_for_url():
 
 @off_resource.errorhandler(Exception)
 def handle_server_exception(e):
-    response = e.get_response()
-    response.data = json.dumps({
-        "code": e.code,
-        "message": e.description,
-    })
-    response.content_type = "application/json"
-    return response
+    traceback.print_exc()
+    if isinstance(e, HTTPException):
+        response = e.get_response()
+        response.data = json.dumps({
+            "code": e.code,
+            "message": e.description,
+        })
+        response.content_type = "application/json"
+        return response
+    else:
+        return json.dumps({
+            "code": 500,
+            "message": str(e),
+        }), 500

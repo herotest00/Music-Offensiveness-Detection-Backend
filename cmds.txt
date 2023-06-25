@@ -3,8 +3,3 @@ venv\Scripts\activate
 pip install -r libs.txt
 
 flask run --debug
-
-
-nu cred ca mai trb
-pip uninstall protobuf
-pip install protobuf==3.20.0

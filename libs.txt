@@ -1,11 +1,13 @@
 flask
 flask-cors
+Flask-SQLAlchemy
 
 python-dotenv
 
 pytube
-
 youtube-title-parse
+
+shazamio
 
 youtube-transcript-api
 lyricsgenius
@@ -18,4 +20,7 @@ git+https://github.com/facebookresearch/demucs#egg=demucs
 git+https://github.com/openai/whisper.git
 
 alt-profanity-check
+
+mediapipe==0.10.1
+
 

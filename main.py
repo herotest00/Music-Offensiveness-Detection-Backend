@@ -1,4 +1,3 @@
-import logging
 import os
 
 from dotenv import load_dotenv
@@ -6,24 +5,24 @@ from flask import Flask
 from flask_cors import CORS
 
 from api.offensiveness_resource import off_resource
+from control.database import db_session, init_db
 
 app = Flask(__name__)
+
+# load config
+load_dotenv('.env')
+
+# load db
+init_db()
 
 # expose endpoints
 app.register_blueprint(off_resource)
 
-print("X")
-app.logger.setLevel(logging.DEBUG)
-app.logger.debug("TEST")
 
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db_session.remove()
 
-# load env properties
-APP_ENV = os.getenv("local") == "True"
-if APP_ENV:
-    load_dotenv("resources/.env.local")
-else:
-    load_dotenv("resources/.env.prod")
 
 # CORS
-CORS(app, resources={r"/*": {"origins": os.environ["http.cors.allow-origins"]}})
-logging.getLogger('werkzeug').setLevel(logging.DEBUG)
+CORS(app, resources={r'/*': {'origins': os.environ['CORS_ALLOWED_ORIGINS']}})
