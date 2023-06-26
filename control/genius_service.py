@@ -45,8 +45,6 @@ class GeniusService:
             return False
         artists1 = self.__tokenize_artists(artists1)
         artists2 = self.__tokenize_artists(artists2)
-        print("ART 1: ", artists1)
-        print("ART 2: ", artists2)
         for artist in artists1:
             if artist in artists2:
                 return True

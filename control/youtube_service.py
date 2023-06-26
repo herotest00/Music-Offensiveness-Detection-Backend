@@ -1,16 +1,11 @@
-import asyncio
 import os
-import random
 import re
-import string
 
 import requests
 from bs4 import BeautifulSoup
 from pytube import YouTube
 from youtube_title_parse import get_artist_title
 from youtube_transcript_api import YouTubeTranscriptApi
-
-from control.shazam_service import ShazamService
 
 
 class YoutubeService:

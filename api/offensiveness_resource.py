@@ -14,10 +14,17 @@ off_resource = Blueprint("offensiveness_resource", __name__)
 def get_offensiveness_for_url():
     url = request.args.get("url")
     service = OffensivenessService(url)
-    video_offensiveness, audio_offensiveness = service.start_processing()
+    video_offensiveness, images, audio_offensiveness, text_off = service.start_processing()
 
-    offensiveness = {'videoOffensiveness': 0.13,
-                     'audioOffensiveness': audio_offensiveness}
+    offensiveness = {
+        'videoOffensiveness': {
+            'score': video_offensiveness,
+            'images': [image.serialize() for image in images]
+        },
+        'audioOffensiveness': {
+            'score': audio_offensiveness,
+            'text': [text.serialize() for text in text_off]}
+    }
     return offensiveness
 
 

@@ -1,18 +1,22 @@
 import asyncio
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 
+import cv2
 import numpy as np
+from profanity_check import predict
 
 from control.database import db_session
 from control.genius_service import GeniusService
+from control.object_detection_service import ObjectDetectionService
 # from control.gesture_detection_service import GestureDetectionService
 from control.shazam_service import ShazamService
 from control.speech_to_text_service import SpeechToTextService
 from control.youtube_service import YoutubeService
-from profanity_check import predict_prob, predict
-
-from model.offensiveness_log import OffensivenessLog
+from model.offensiveness_cache import OffensivenessCache
+from model.text_offensiveness import Lyrics
+from model.video_offensiveness import Image
 
 
 class OffensivenessService:
@@ -23,7 +27,8 @@ class OffensivenessService:
         self.__genius_service = GeniusService()
         self.__shazam_service = None
         self.__asr_service = None
-        self.__gesture_detection_service = None
+        self.__object_detection_service = None
+        # self.__gesture_detection_service = None
 
         self.__audio_filepath = None
         self.__video_filepath = None
@@ -35,40 +40,67 @@ class OffensivenessService:
         self.__transcript = None
 
     def start_processing(self):
-        cached_offensiveness = OffensivenessLog.query.filter_by(url=self.__url).first()
+        video_offensiveness = None
+        audio_offensiveness = None
+        images = None
+        text_off = None
+        cached_offensiveness = OffensivenessCache.query.filter_by(url=self.__url).first()
+
         if cached_offensiveness is not None:
-            return float(cached_offensiveness.video_offensiveness), float(cached_offensiveness.audio_offensiveness)
+            images, video_offensiveness = cached_offensiveness.images, cached_offensiveness.video_offensiveness
+            text_off, audio_offensiveness = cached_offensiveness.lyrics, cached_offensiveness.audio_offensiveness
+            if video_offensiveness is not None and audio_offensiveness is not None:
+                return float(video_offensiveness), images, float(audio_offensiveness), text_off
 
         self.__audio_filepath, self.__video_filepath = self.__yt_service.download_data_streams()
         self.__artist, self.__title = self.__get_music_metadata()
 
-        audio_offensiveness = self.__process_audio_stream()
-        # audio_offensiveness = 0
-        # video_offensiveness = self.__process_video_stream()
-        video_offensiveness = 0
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            if audio_offensiveness is None:
+                future_audio = executor.submit(self.__process_audio_stream)
+            if video_offensiveness is None:
+                future_video = executor.submit(self.__process_video_stream)
 
-        db_session.add(OffensivenessLog(self.__url, self.__artist, self.__title, video_offensiveness, audio_offensiveness))
+            if audio_offensiveness is None:
+                text_off, audio_offensiveness = future_audio.result()
+            if video_offensiveness is None:
+                images, video_offensiveness = future_video.result()
+
+        if cached_offensiveness is None:
+            db_session.add(OffensivenessCache(self.__url, self.__artist, self.__title, video_offensiveness,
+                                              audio_offensiveness, images, text_off))
+        else:
+            cached_offensiveness.video_offensiveness = video_offensiveness
+            cached_offensiveness.audio_offensiveness = audio_offensiveness
+            cached_offensiveness.images = images
+            cached_offensiveness.lyrics = text_off
         db_session.commit()
 
-        return 0, audio_offensiveness
+        return float(video_offensiveness), images, float(audio_offensiveness), text_off
 
     def __process_video_stream(self):
-        # self.__gesture_detection_service = GestureDetectionService(self.__video_filepath)
-        # return self.__gesture_detection_service.get_offensiveness()
-        pass
+        self.__gesture_detection_service = ObjectDetectionService(self.__video_filepath)
+        try:
+            images = self.__gesture_detection_service.predict()
+            return [Image(np_array_to_bytes(image)) for image in images],\
+                len(images) / self.__gesture_detection_service.max_num_images
+        except Exception as e:
+            print('Error in gesture detection: ', e)
+            return None, None
 
     def __process_audio_stream(self):
-        self.__transcript = self.__extract_transcript()
+        try:
+            self.__transcript = self.__extract_transcript()
+            if self.__transcript is None:
+                print("Couldn't extract transcript")
+                return None, None
 
-        if self.__transcript is None:
-            return 0
-        text = [line['text'] for line in self.__transcript]
-        # offs = predict_prob(text)
-        offs = predict(text)
-        for line, off in zip(text, offs):
-            # print(f'{line} --- {off}')
-            pass
-        return np.mean(offs)
+            text = [line['text'] for line in self.__transcript]
+            offs = predict(text)
+            return [Lyrics(t, o) for t, o in zip(text, offs)], np.mean(offs)
+        except Exception as e:
+            print('Error in audio processing: ', e)
+            return None, None
 
     def __extract_transcript(self):
         transcript = self.__shazam_service.get_lyrics()
@@ -89,9 +121,7 @@ class OffensivenessService:
             self.__asr_service = SpeechToTextService(self.__audio_filepath)
             transcript = self.__asr_service.extract_transcript()
 
-        if transcript is None:
-            raise Exception("No transcript found")
-        else:
+        if transcript is not None:
             self.__transcript_filepath = self.__save_transcript(transcript)
         return transcript
 
@@ -109,3 +139,7 @@ class OffensivenessService:
             artist, title = self.__yt_service.get_song_metadata()
         return artist, title
 
+
+def np_array_to_bytes(image):
+    is_success, buffer = cv2.imencode(".jpg", image)
+    return buffer.tobytes()
