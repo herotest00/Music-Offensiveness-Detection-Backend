@@ -17,5 +17,5 @@ class Lyrics(Base):
     def serialize(self):
         return {
             'text': self.text,
-            'offensiveness': self.offensive
+            'offensive': self.offensive
         }
